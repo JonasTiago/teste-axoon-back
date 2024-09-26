@@ -10,7 +10,7 @@ async function listServer() {
 
     return response.data;
   } catch (error) {
-    console.error("Error listServer:", error.status);
+    console.error("Error listServer:", error);
     throw error;
   }
 }

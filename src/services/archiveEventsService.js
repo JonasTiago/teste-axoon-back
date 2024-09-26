@@ -1,3 +1,4 @@
+import e from "express";
 import api from "../api/api.js";
 
 async function listContents(videoSourceid) {
@@ -57,17 +58,17 @@ async function archiveStopStream(uuid, videoSourceid) {
   try {
     const stop = await api.get(`archive/media/stop/${uuid}`);
 
-    const moment = await api.get(
-      `/archive/media/${videoSourceid}/${stop.data.timestamp}`,
-      {
-        responseType: "arraybuffer",
-      }
-    );
+    // const moment = await api.get(
+    //   `/archive/media/${videoSourceid}/${stop.data.timestamp}`,
+    //   {
+    //     responseType: "arraybuffer",
+    //   }
+    // );
 
     // if (!uuid.data.uuid) {
     //   throw { message: "stream not found", code: 404 };
     // }
-    return moment.data;
+    return stop.data.timestamp;
   } catch (error) {
     console.error("Error archiveStopStream:", error.status);
     throw error;
@@ -105,7 +106,11 @@ async function getFrame(videoSourceid, starttime) {
 
     return frame.data;
   } catch (error) {
-    console.error("Error getFrame:", error.status);
+    console.error(
+      "Error getFrame:",
+      error.response.data.statusMessage,
+      error.response.data.statusCode
+    );
     throw error;
   }
 }
@@ -122,7 +127,84 @@ async function listEvents(videoSourceid) {
 
     return response.data;
   } catch (error) {
-    console.error("Error listEvents:", error.status);
+    console.error(
+      "Error listEvents:",
+      error.response.data.statusMessage,
+      error.response.data.statusCode
+    );
+    throw error;
+  }
+}
+
+async function exportArchive(videoSourceid, endtime, begintime, format) {
+  try {
+    const exportInit = await api.post(
+      `/export/archive/${videoSourceid}/${begintime}/${endtime}`,
+      format
+    );
+
+    const export_id = exportInit.headers.location.replace("/export/", "");
+
+    return export_id;
+  } catch (error) {
+    console.error("Error exportArchive:", error);
+    throw error;
+  }
+}
+
+async function statusExportArchive(export_id) {
+  try {
+    const exportStatus = await api.get(`/export/${export_id}/status`);
+
+    return exportStatus.data;
+  } catch (error) {
+    console.error(
+      "Error statusExportArchive:",
+      error.response.data.statusMessage,
+      error.response.data.statusCode
+    );
+    throw error;
+  }
+}
+
+async function deleteExport(export_id) {
+  try {
+    const exportStatus = await api.delete(`/export/${export_id}`);
+
+    return exportStatus.data;
+  } catch (error) {
+    console.error(
+      "Error statusExportArchive:",
+      error.response.data.statusMessage,
+      error.response.data.statusCode
+    );
+    throw error;
+  }
+}
+
+async function downloadExport(export_id, fileName) {
+  // http://127.0.0.1:80/export/ea221922-ef17-4f02-8e1d-b1183f3366db/file
+  // ?name=LAPTOP-3UEDE0C4_DeviceIpint.14[20240923T113813.608000-20240923T113827.745000].mp4
+  // console.log(`/export/${export_id}/file?name=${fileName}`);
+  try {
+    const exportFile = await api.get(
+      `/export/${export_id}/file?name=${fileName}`,
+      {
+        responseType: "stream", // Isso garante que os dados sejam recebidos como um stream de arquivo
+      }
+    );
+
+    // await deleteExport(export_id); // Deleta o arquivo
+
+    return exportFile.data; // Retorna o stream do arquivo
+  } catch (error) {
+    // statusCode: 404,
+    // statusMessage: 'Not Found',
+    console.error(
+      "Error downloadExport:",
+      error.response.data.statusMessage,
+      error.response.data.statusCode
+    );
     throw error;
   }
 }
@@ -135,4 +217,8 @@ export const archiveEventsService = {
   getUuid,
   archiveStopStream,
   getFrame,
+  exportArchive,
+  statusExportArchive,
+  deleteExport,
+  downloadExport,
 };

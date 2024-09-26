@@ -26,6 +26,9 @@ async function archiveStream(req, res) {
       uuid
     );
 
+    res.set("X-Stream-UUID", uuid); // UUID no cabeçalho
+    res.set("Access-Control-Expose-Headers", "X-Stream-UUID");
+
     res.set("Content-Type", "multipart/x-mixed-replace; boundary=ngpboundary");
     res.set("Content-Disposition", "inline");
 
@@ -53,12 +56,10 @@ async function stopStream(req, res) {
       videoSourceid
     );
 
-    res.set("Content-Type", "image/jpeg");
-    res.set("Content-Disposition", 'inline; filename="moment.jpg"');
+    // res.set("Content-Type", "image/jpeg");
+    // res.set("Content-Disposition", 'inline; filename="moment.jpg"');
 
-    res.send(moment);
-
-    res.status(200).send();
+    res.status(200).send(moment);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -107,6 +108,68 @@ async function listEvents(req, res) {
   }
 }
 
+async function exportArchive(req, res) {
+  const { videoSourceid } = req.query;
+  const { endtime, begintime } = req.params;
+  const format = req.body;
+
+  try {
+    const export_id = await archiveEventsService.exportArchive(
+      videoSourceid,
+      endtime,
+      begintime,
+      format
+    );
+
+    res.status(200).send({ export_id });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
+async function statusExport(req, res) {
+  const { export_id } = req.params;
+
+  try {
+    const status = await archiveEventsService.statusExportArchive(export_id);
+
+    res.status(200).send(status);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
+async function deleteExport(req, res) {
+  const { export_id } = req.params;
+
+  try {
+    const status = await archiveEventsService.deleteExport(export_id);
+
+    res.status(200).send(status);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
+async function downloadExport(req, res) {
+  const { export_id } = req.params;
+  const { fileName } = req.query;
+
+  try {
+    const fileStream = await archiveEventsService.downloadExport(
+      export_id,
+      fileName
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Type", "video/mp4");
+
+    fileStream.pipe(res);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
 export {
   listEvents,
   archiveStream,
@@ -114,4 +177,8 @@ export {
   listFramesByVideo,
   getFrame,
   listContents,
+  exportArchive,
+  statusExport,
+  deleteExport,
+  downloadExport,
 };
